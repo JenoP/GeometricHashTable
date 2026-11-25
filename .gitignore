@@ -149,6 +149,7 @@ coverage*.info
 
 # Visual Studio code coverage results
 *.coverage
+!GeometricHashTable.Coverage/
 *.coveragexml
 
 # NCrunch
