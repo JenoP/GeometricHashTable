@@ -1,0 +1,57 @@
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+name: MSBuild
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  # Configuration type to build.
+  # You can convert this to a build matrix if you need coverage of multiple configuration types.
+  # https://docs.github.com/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+  BUILD_CONFIGURATION: Release
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@v1.0.2
+
+    - name: Build solution
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      run: msbuild GeometricHashTable.slnx /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=x64
+
+    - name: Run unit tests
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      shell: pwsh
+      run: .\x64\Release\GeometricHashTable.Tests.exe
+
+    - name: Run benchmark smoke test
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      shell: pwsh
+      run: .\x64\Release\GeometricHashTable.Benchmarks.exe .\GeometricHashTable\wavy_surface_100000.stl 1 32
+
+    - name: Collect and gate code coverage
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      shell: pwsh
+      run: .\Run-Coverage.ps1 -Configuration Debug -Platform x64 -Output "$env:RUNNER_TEMP\coverage.xml"
+
+    - name: Upload code coverage report
+      uses: actions/upload-artifact@v4
+      with:
+        name: geometric-hash-table-coverage
+        path: ${{ runner.temp }}/coverage.xml
+        if-no-files-found: error

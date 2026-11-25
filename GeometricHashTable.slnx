@@ -1,0 +1,10 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="GeometricHashTable.Benchmarks/GeometricHashTable.Benchmarks.vcxproj" Id="ac2e3b4a-37f1-4bd1-9bb3-bb5c87b6e621" />
+  <Project Path="GeometricHashTable.Coverage/GeometricHashTable.Coverage.vcxproj" Id="c7f1e47b-3b46-4e31-b550-91342a26b20f" />
+  <Project Path="GeometricHashTable.Tests/GeometricHashTable.Tests.vcxproj" Id="76c8a18b-6ccb-488f-a0bc-bd8fa68fc780" />
+  <Project Path="GeometricHashTable/GeometricHashTable.vcxproj" Id="3886fbf3-e8ca-401a-bd60-0b21f0c87101" />
+</Solution>
