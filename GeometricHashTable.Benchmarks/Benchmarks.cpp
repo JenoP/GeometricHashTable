@@ -382,7 +382,7 @@ int RunLookupBenchmarks(const BenchmarkOptions& options)
 	const Triangle nearTolerance = BuildTriangle(
 		0.0, 0.0, 0.0,
 		1.0, 0.0, 0.6661729,
-		1.0 + Point3::EPS / 2.0, 1.0, 0.6646931);
+		1.0 + detail::EPS / 2.0, 1.0, 0.6646931);
 	RunLookupBenchmark("lookup-near-tolerance", table, nearTolerance, options.lookupIterations,
 		false);
 

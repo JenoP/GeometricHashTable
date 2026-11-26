@@ -153,12 +153,12 @@ void RunAllTests()
 		RecordResult(summary, "Point3 has a usable zero-valued default constructor.",
 			Point3{} == origin);
 		RecordResult(summary, "Point3 considers coordinates within EPS equal.",
-			origin == Point3{ Point3::EPS / 2.0, 0.0, 0.0 });
+			origin == Point3{ detail::EPS / 2.0, 0.0, 0.0 });
 		RecordResult(summary, "Point3 rejects coordinates at the EPS boundary.",
-			!(origin == Point3{ Point3::EPS, 0.0, 0.0 }));
+			!(origin == Point3{ detail::EPS, 0.0, 0.0 }));
 		RecordResult(summary, "Point3 equality is symmetric for nearby coordinates.",
-			(Point3{ 1.0, 2.0, 3.0 } == Point3{ 1.0 + Point3::EPS / 2.0, 2.0, 3.0 }) &&
-			(Point3{ 1.0 + Point3::EPS / 2.0, 2.0, 3.0 } == Point3{ 1.0, 2.0, 3.0 }));
+			(Point3{ 1.0, 2.0, 3.0 } == Point3{ 1.0 + detail::EPS / 2.0, 2.0, 3.0 }) &&
+			(Point3{ 1.0 + detail::EPS / 2.0, 2.0, 3.0 } == Point3{ 1.0, 2.0, 3.0 }));
 
 		Point3 parsedPoint;
 		GetVertex("vertex 1.25 -2.5 3.75", &parsedPoint);
@@ -351,18 +351,18 @@ void RunAllTests()
 		const Triangle almostEqualTriangle = BuildTriangle(
 			0.0, 0.0, 0.0,
 			0.0, 1.0, 0.0,
-			1.0 + Point3::EPS / 2.0, 0.0, 0.0);
+			1.0 + detail::EPS / 2.0, 0.0, 0.0);
 		const Triangle outsideToleranceTriangle = BuildTriangle(
 			0.0, 0.0, 0.0,
 			0.0, 1.0, 0.0,
-			1.0 + Point3::EPS * 2.0, 0.0, 0.0);
+			1.0 + detail::EPS * 2.0, 0.0, 0.0);
 
 		RecordResult(summary, "Construct and Lookup work with a minimal ASCII STL file.",
 			hashTable.Lookup(triangle));
 		const Triangle sameBucketTriangle = BuildTriangle(
 			0.0, 0.0, 0.0,
 			0.0, 1.0, 0.0,
-			1.0 + Point3::EPS / 10.0, 0.0, 0.0);
+			1.0 + detail::EPS / 10.0, 0.0, 0.0);
 		RecordResult(summary, "Lookup finds a within-EPS triangle when quantization selects the same bucket.",
 			triangle[2] == sameBucketTriangle[2] && hashTable.Lookup(sameBucketTriangle));
 		RecordResult(summary, "An EPS-equal coordinate can quantize to a different hash bucket.",
@@ -635,7 +635,7 @@ void RunAllTests()
 		const Triangle negativeOutsideTolerance = BuildTriangle(
 			-3.5, -2.25, 1.125,
 			-2.5, -2.25, 1.125,
-			-3.5, -1.25, 1.125 + Point3::EPS * 2.0);
+			-3.5, -1.25, 1.125 + detail::EPS * 2.0);
 		RecordResult(summary, "Negative-coordinate Lookup rejects a triangle outside the point tolerance.",
 			!hashTable.Lookup(negativeOutsideTolerance));
 	}
@@ -713,8 +713,8 @@ void RunAllTests()
 
 	{
 		const Point3 a{ 1.0, 2.0, 3.0 };
-		const Point3 b{ 1.0, 2.0, 3.0 + Point3::EPS / 2.0 };
-		const Point3 c{ 1.0, 2.0, 3.0 + Point3::EPS * 2.0 };
+		const Point3 b{ 1.0, 2.0, 3.0 + detail::EPS / 2.0 };
+		const Point3 c{ 1.0, 2.0, 3.0 + detail::EPS * 2.0 };
 		RecordResult(summary, "Point3 equality remains symmetric at in-tolerance and boundary-adjacent values.",
 			(a == b) && (b == a) && !(a == c) && !(c == a));
 	}

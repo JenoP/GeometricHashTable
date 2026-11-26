@@ -6,6 +6,8 @@
 
 namespace detail
 {
+	static constexpr double EPS = 1e-6;
+
 	static constexpr auto VERTEX_STR = "vertex";
 	static constexpr auto VERTEX_LEN = 6; // Length of string "vertex".
 	static constexpr auto WHITESPACE_LEN = 1; // Length of whitespace character.
@@ -29,13 +31,11 @@ namespace detail
 
 struct Point3 
 {
-	static constexpr double EPS = 1e-6;
-
 	double x = 0.0, y = 0.0, z = 0.0;
 
 	bool IsAlmostEqual(const double& a, const double& b) const
 	{
-		return std::abs(a - b) < EPS;
+		return std::abs(a - b) < detail::EPS;
 	}
 
 	bool operator==(const Point3& other) const

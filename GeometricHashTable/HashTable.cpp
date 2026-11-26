@@ -16,7 +16,8 @@ HashTable::HashTable(const uint32_t maxEntries)
 
 static inline uint32_t Hash(const Triangle& triangle, const uint32_t maxEntries)
 {
-	return hashTriangle(triangle[0], triangle[1], triangle[2], maxEntries);
+	return hashTriangle(triangle[0], triangle[1], triangle[2],
+		maxEntries, detail::EPS, false);
 }
 
 void HashTable::Construct(const std::string& stlFileStr)
@@ -60,7 +61,7 @@ Triangle HashTable::_GetTriangle(std::ifstream& stlFileStream) const
 	Point3 p1, p2, p3;
 	std::string line;
 
-	for (Point3* p : { &p1, &p2, &p3})
+	for (Point3* p : { &p1, &p2, &p3 })
 	{
 		if (std::getline(stlFileStream >> std::ws, line))
 		{
