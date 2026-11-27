@@ -30,6 +30,12 @@ jobs:
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v1.0.2
 
+    - name: Set up NuGet
+      uses: NuGet/setup-nuget@v2
+
+    - name: Restore NuGet packages
+      run: nuget restore packages.config -PackagesDirectory packages
+
     - name: Build solution
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: msbuild GeometricHashTable.slnx /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:Platform=x64
