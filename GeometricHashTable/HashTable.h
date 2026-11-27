@@ -25,7 +25,7 @@ public:
 private:
 	void _Initialize(const std::string& stlFileStr, std::ifstream& stlFileStream);
 
-	Triangle _GetTriangle(std::ifstream& stlFileStream) const;
+	void _ConstructTriangle(std::ifstream& stlFileStream);
 
 private:
 	uint32_t m_maxEntries = 0;

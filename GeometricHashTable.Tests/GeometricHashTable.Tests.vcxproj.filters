@@ -15,10 +15,10 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="HashTable.Tests.cpp">
+    <ClCompile Include="..\GeometricHashTable\HashTable.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\GeometricHashTable\HashTable.cpp">
+    <ClCompile Include="HashTable.GoogleTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -170,7 +170,7 @@ $missingSourcePaths = @($expectedSourcePaths | Where-Object { -not $coveredSourc
 if ($missingSourcePaths.Count -gt 0) {
 	throw "Coverage report is missing expected base-code sources: $($missingSourcePaths -join ', ')"
 }
-$expectedHashTableFunctions = @("Construct", "_Initialize", "_GetTriangle")
+$expectedHashTableFunctions = @("Construct", "_Initialize", "_ConstructTriangle", "Lookup")
 $missingHashTableFunctions = @($expectedHashTableFunctions | Where-Object { -not $coveredHashTableFunctions.ContainsKey($_) })
 if ($missingHashTableFunctions.Count -gt 0) {
 	throw "Coverage report is missing HashTable functions: $($missingHashTableFunctions -join ', '). Use an unoptimized Debug coverage build."

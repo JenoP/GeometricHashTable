@@ -6,7 +6,7 @@
 #include "HashTable.h"
 
 
-static constexpr auto MAX_TRIANGLES = 1000000; // 1 Million
+static constexpr auto MAX_TRIANGLES = 1'000'000; // 1 Million
 
 static constexpr auto CMD_LINE_USAGE_STR = "GeometricHashTable.exe wavy_surface_100000.stl {{0.000000e+00,0.000000e+00,0.000000e+00}{1.000000e+00,1.000000e+00,6.646931e-01}{0.000000e+00,1.000000e+00,0.000000e+00}}";
 
@@ -32,23 +32,27 @@ static Triangle GetTriangle(const std::string_view& triangleStr)
 	Point3 p1, p2, p3;
 
 	detail::from_chars_result res;
-	res = std::from_chars(triangleStr.data() + 2 * BRACE_LEN, triangleStr.data() + triangleStr.size(), p1.x);
 
-	res = std::from_chars(res.ptr + COMMA_LEN, triangleStr.data() + triangleStr.size(), p1.y);
+	const auto& start = res.ptr;
+	const auto end = triangleStr.data() + triangleStr.size();
 
-	res = std::from_chars(res.ptr + COMMA_LEN, triangleStr.data() + triangleStr.size(), p1.z);
+	res = std::from_chars(triangleStr.data() + 2 * BRACE_LEN, end, p1.x);
 
-	res = std::from_chars(res.ptr + 2 * BRACE_LEN, triangleStr.data() + triangleStr.size(), p2.x);
+	res = std::from_chars(start + COMMA_LEN, end, p1.y);
 
-	res = std::from_chars(res.ptr + COMMA_LEN, triangleStr.data() + triangleStr.size(), p2.y);
+	res = std::from_chars(start + COMMA_LEN, end, p1.z);
 
-	res = std::from_chars(res.ptr + COMMA_LEN, triangleStr.data() + triangleStr.size(), p2.z);
+	res = std::from_chars(start + 2 * BRACE_LEN, end, p2.x);
 
-	res = std::from_chars(res.ptr + 2 * BRACE_LEN, triangleStr.data() + triangleStr.size(), p3.x);
+	res = std::from_chars(start + COMMA_LEN, end, p2.y);
 
-	res = std::from_chars(res.ptr + COMMA_LEN, triangleStr.data() + triangleStr.size(), p3.y);
+	res = std::from_chars(start + COMMA_LEN, end, p2.z);
 
-	res = std::from_chars(res.ptr + COMMA_LEN, triangleStr.data() + triangleStr.size(), p3.z);
+	res = std::from_chars(start + 2 * BRACE_LEN, end, p3.x);
+
+	res = std::from_chars(start + COMMA_LEN, end, p3.y);
+
+	res = std::from_chars(start + COMMA_LEN, end, p3.z);
 
 	return { p1, p2, p3 };
 }

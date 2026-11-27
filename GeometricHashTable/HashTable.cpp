@@ -26,19 +26,12 @@ void HashTable::Construct(const std::string& stlFileStr)
 	_Initialize(stlFileStr, stlFileStream);
 
 	std::string line;
-	Triangle triangle;
 
 	while (std::getline(stlFileStream >> std::ws, line))
 	{
 		if (line.starts_with(OUTER_LOOP_STR))
 		{
-			triangle = _GetTriangle(stlFileStream);
-
-			auto& slot = m_Triangles[Hash(triangle, m_maxEntries)];
-			if (!slot)
-			{
-				slot = triangle;
-			}
+			_ConstructTriangle(stlFileStream);
 		}
 	}
 }
@@ -56,12 +49,12 @@ void HashTable::_Initialize(const std::string& stlFileStr, std::ifstream& stlFil
 	m_Triangles.resize(m_maxEntries);
 }
 
-Triangle HashTable::_GetTriangle(std::ifstream& stlFileStream) const
+void HashTable::_ConstructTriangle(std::ifstream& stlFileStream)
 {
-	Point3 p1, p2, p3;
+	Triangle triangle;
 	std::string line;
 
-	for (Point3* p : { &p1, &p2, &p3 })
+	for (Point3* p : { &triangle[0], &triangle[1], &triangle[2] })
 	{
 		if (std::getline(stlFileStream >> std::ws, line))
 		{
@@ -69,7 +62,13 @@ Triangle HashTable::_GetTriangle(std::ifstream& stlFileStream) const
 		}
 	}
 
-	return { p1, p2, p3 };
+	triangle.Normalize();
+
+	auto& slot = m_Triangles[Hash(triangle, m_maxEntries)];
+	if (!slot)
+	{
+		slot = triangle;
+	}
 }
 
 bool HashTable::Lookup(const Triangle& triangle) const
