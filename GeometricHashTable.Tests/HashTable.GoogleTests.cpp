@@ -95,25 +95,23 @@ TEST(TriangleTests, ConstructorNormalizesAndDefaultIsOrigin) {
 
 TEST(VertexParsingTests, AcceptsPositiveNegativeAndScientificCoordinates) {
 	Point3 point;
-	GetVertex("vertex 1.25 -2.5 3.75", &point);
+	GetVertex("vertex 1.25 -2.5 3.75", point);
 	const Point3 positiveNegative{ 1.25, -2.5, 3.75 };
 	EXPECT_EQ(point, positiveNegative);
 
-	GetVertex("vertex -1.25e-2 2.5e+1 3.75e0", &point);
+	GetVertex("vertex -1.25e-2 2.5e+1 3.75e0", point);
 	const Point3 scientific{ -0.0125, 25.0, 3.75 };
 	EXPECT_EQ(point, scientific);
 }
 
 TEST(VertexParsingTests, RejectsMalformedAndMissingInput) {
-	EXPECT_THROW(GetVertex("facet normal 0 0 0", reinterpret_cast<Point3*>(0)), std::invalid_argument);
-
 	Point3 point;
-	EXPECT_THROW(GetVertex("not-a-vertex 0 1 2", &point), std::invalid_argument);
-	EXPECT_THROW(GetVertex("vertex invalid 0 0", &point), std::runtime_error);
-	EXPECT_THROW(GetVertex("vertex 1 invalid 0", &point), std::runtime_error);
-	EXPECT_THROW(GetVertex("vertex 1 2 invalid", &point), std::runtime_error);
-	EXPECT_THROW(GetVertex("vertex 1 2 ", &point), std::runtime_error);
-	EXPECT_THROW(GetVertex("vertex 1 2 3", nullptr), std::invalid_argument);
+	EXPECT_THROW(GetVertex("facet normal 0 0 0", point), std::invalid_argument);
+	EXPECT_THROW(GetVertex("not-a-vertex 0 1 2", point), std::invalid_argument);
+	EXPECT_THROW(GetVertex("vertex invalid 0 0", point), std::runtime_error);
+	EXPECT_THROW(GetVertex("vertex 1 invalid 0", point), std::runtime_error);
+	EXPECT_THROW(GetVertex("vertex 1 2 invalid", point), std::runtime_error);
+	EXPECT_THROW(GetVertex("vertex 1 2 ", point), std::runtime_error);
 }
 
 TEST(HashTests, TriangleHashIsOrderIndependentAndBounded) {
@@ -476,24 +474,20 @@ TEST(TriangleTests, NormalizationPreservesDuplicateVertices) {
 
 TEST(VertexParsingTests, RejectsIncompleteScientificNotationBeforeFinalCoordinate) {
 	Point3 point;
-	EXPECT_THROW(GetVertex("vertex 1e 0 0", &point), std::runtime_error);
-	EXPECT_THROW(GetVertex("vertex 1 2e 0", &point), std::runtime_error);
+	EXPECT_THROW(GetVertex("vertex 1e 0 0", point), std::runtime_error);
+	EXPECT_THROW(GetVertex("vertex 1 2e 0", point), std::runtime_error);
 }
 
 TEST(VertexParsingTests, RejectsMalformedYAndZCoordinates) {
 	Point3 point;
-	EXPECT_THROW(GetVertex("vertex 1 invalid 0", &point), std::runtime_error);
-	EXPECT_THROW(GetVertex("vertex 1 2 invalid", &point), std::runtime_error);
+	EXPECT_THROW(GetVertex("vertex 1 invalid 0", point), std::runtime_error);
+	EXPECT_THROW(GetVertex("vertex 1 2 invalid", point), std::runtime_error);
 }
 
 TEST(VertexParsingTests, RejectsMissingZCoordinateAndCoordinateOnlyLine) {
 	Point3 point;
-	EXPECT_THROW(GetVertex("vertex 1 2 ", &point), std::runtime_error);
-	EXPECT_THROW(GetVertex("vertex ", &point), std::runtime_error);
-}
-
-TEST(VertexParsingTests, RejectsNullPointer) {
-	EXPECT_THROW(GetVertex("vertex 1 2 3", nullptr), std::invalid_argument);
+	EXPECT_THROW(GetVertex("vertex 1 2 ", point), std::runtime_error);
+	EXPECT_THROW(GetVertex("vertex ", point), std::runtime_error);
 }
 
 TEST(HashTests, QuantizesZeroAndNegativeHalfToleranceDeterministically) {
@@ -618,14 +612,14 @@ TEST(HashTableTests, WavyFixtureReturnsFalseForAbsentTriangle) {
 
 TEST(VertexParsingTests, RejectsNumericOverflowInEachCoordinate) {
 	Point3 point;
-	EXPECT_THROW(GetVertex("vertex 1e9999 0 0", &point), std::runtime_error);
-	EXPECT_THROW(GetVertex("vertex 0 1e9999 0", &point), std::runtime_error);
-	EXPECT_THROW(GetVertex("vertex 0 0 1e9999", &point), std::runtime_error);
+	EXPECT_THROW(GetVertex("vertex 1e9999 0 0", point), std::runtime_error);
+	EXPECT_THROW(GetVertex("vertex 0 1e9999 0", point), std::runtime_error);
+	EXPECT_THROW(GetVertex("vertex 0 0 1e9999", point), std::runtime_error);
 }
 
 TEST(VertexParsingTests, RejectsEmptyString) {
 	Point3 point;
-	EXPECT_THROW(GetVertex("", &point), std::invalid_argument);
+	EXPECT_THROW(GetVertex("", point), std::invalid_argument);
 }
 
 TEST(HashTests, NearbyCoordinatesInSameQuantizationCellHashIdentically) {
@@ -770,15 +764,15 @@ TEST(TriangleTests, NormalizeProducesDeterministicLexicographicVertices) {
 
 TEST(VertexParsingTests, IgnoresTrailingTokensAfterThirdCoordinate) {
 	Point3 point;
-	EXPECT_NO_THROW(GetVertex("vertex 1 2 3 trailing", &point));
+	EXPECT_NO_THROW(GetVertex("vertex 1 2 3 trailing", point));
 	EXPECT_EQ(point, (Point3{ 1.0, 2.0, 3.0 }));
 }
 
 TEST(VertexParsingTests, CharacterizesNonFiniteCoordinateParsing) {
 	Point3 point;
-	EXPECT_NO_THROW(GetVertex("vertex nan 0 0", &point));
-	EXPECT_NO_THROW(GetVertex("vertex 0 inf 0", &point));
-	EXPECT_NO_THROW(GetVertex("vertex 0 0 -inf", &point));
+	EXPECT_NO_THROW(GetVertex("vertex nan 0 0", point));
+	EXPECT_NO_THROW(GetVertex("vertex 0 inf 0", point));
+	EXPECT_NO_THROW(GetVertex("vertex 0 0 -inf", point));
 }
 
 TEST(HashTests, QuantizationHandlesNegativeZeroAndExactToleranceBoundary) {

@@ -304,7 +304,7 @@ std::vector<Triangle> LoadLookupTriangles(const std::filesystem::path& stlPath,
 		if (!vertexLine.starts_with("vertex"))
 			continue;
 
-		GetVertex(vertexLine, &vertices[vertexCount]);
+		GetVertex(vertexLine, vertices[vertexCount]);
 		if (++vertexCount == vertices.size())
 		{
 			triangles.emplace_back(vertices[0], vertices[1], vertices[2]);
