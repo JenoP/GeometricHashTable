@@ -1,30 +1,60 @@
 # Geometric Hash Table
 
-A dense, flat C++20 hash table for finding triangles in ASCII STL meshes. Triangles are normalized into vertex order and assigned to one bucket using a deterministic, tolerance-aware 64-bit hash.
+A high-performance C++20 geometric lookup table for ASCII STL meshes. The implementation normalizes every triangle into a deterministic vertex order and maps it to a dense, fixed-size bucket using a tolerance-aware 64-bit hash.
 
-The table stores at most one triangle per bucket. This favors fast construction and direct lookup; it does not provide collision chaining. In a hash collision, the first triangle stored in that bucket is retained.
+The table stores at most one triangle per bucket. It is intentionally a flat lookup structure rather than a chained hash table: construction and lookup remain cache-friendly, while a hash collision retains only the first triangle assigned to that bucket.
 
-## Projects
+## Project layout
 
-| Project | Purpose |
+| Project | Role |
 |---|---|
-| `GeometricHashTable` | STL loader, triangle lookup, and command-line executable |
-| `GeometricHashTable.Tests` | GoogleTest suite covering parsing, hashing, construction, lookup, and edge cases |
-| `GeometricHashTable.Benchmarks` | Construction, lookup, initialization, hash, and distribution benchmarks |
-| `GeometricHashTable.Coverage` | Instrumented test executable for Visual Studio Code Coverage |
+| `GeometricHashTable` | Base library, STL construction and triangle lookup implementation, and command-line executable |
+| `GeometricHashTable.Tests` | GoogleTest suite for parsing, hashing, normalization, reconstruction, collision, and lookup behavior |
+| `GeometricHashTable.Benchmarks` | Release-oriented construction, lookup, initialization, hash, and distribution benchmarks |
+| `GeometricHashTable.Coverage` | Instrumented test executable for Microsoft Visual Studio Code Coverage |
 
-## Implementation
+## How it works
 
-- `Triangle.h` defines 3D points and triangles. Points compare with a `1e-6` absolute epsilon; triangles sort their vertices to make vertex order irrelevant.
-- `Hash.h` quantizes coordinates, mixes vertex hashes with SplitMix64, sorts mixed vertex hashes, and reduces the result into the requested table size.
-- `HashTable.h/.cpp` parses ASCII STL facet lines, stores `Triangle` values in `std::vector<std::optional<Triangle>>`, and performs direct bucket lookup.
-- `Construct()` can be called repeatedly; successful additions remain in the table, and a missing file or malformed facet throws without clearing existing entries.
+1. **Parse:** `HashTable::Construct()` reads ASCII STL text and processes each `outer loop` containing three `vertex` records.
+2. **Normalize:** `Triangle::Normalize()` sorts the three points lexicographically by X, Y, then Z, making vertex permutations equivalent.
+3. **Quantize:** `Hash.h` converts coordinates to integer cells using a configurable tolerance.
+4. **Mix:** Each point is hashed with `mix64()`, a SplitMix64 finalizer. For normal lookups, triangle vertex hashes are sorted before the final mixing step.
+5. **Store:** `_ConstructTriangle()` computes a bucket and stores one `Triangle` in `std::vector<std::optional<Triangle>>`.
+6. **Lookup:** `Lookup()` computes the same bucket and compares the stored triangle with the query using `Point3`'s `1e-6` absolute-coordinate equality.
+
+Primary source files:
+
+- `GeometricHashTable/Triangle.h` - points, triangle ordering and STL vertex parsing
+- `GeometricHashTable/Hash.h` - quantization, mixing and bucket reduction
+- `GeometricHashTable/HashTable.h/.cpp` - STL construction and direct bucket lookup
+- `GeometricHashTable/main.cpp` - command-line interface
+
+## Requirements
+
+- Windows
+- Visual Studio 2022 or later with Desktop development with C++ and C++20 support
+- MSVC `v145` build tools
+- NuGet for package restore
+- Microsoft Code Coverage Console for gated coverage collection
+
+The repository includes GoogleTest as a package under `packages/`.
+
+## Build
+
+From a Developer PowerShell or the repository root:
+
+```powershell
+nuget restore packages.config -PackagesDirectory packages
+msbuild GeometricHashTable.slnx /m /p:Configuration=Release /p:Platform=x64
+```
+
+All four Visual Studio projects are configured for Win32 and x64. The commands below use x64 and Release because those outputs are selected by the workflow and test runners.
 
 ## C++ API
 
 ```cpp
-#include "Triangle.h"
-#include "HashTable.h"
+#include "GeometricHashTable/Triangle.h"
+#include "GeometricHashTable/HashTable.h"
 
 HashTable table(1'000'000);
 table.Construct("GeometricHashTable/wavy_surface_100000.stl");
@@ -37,21 +67,15 @@ Triangle triangle(
 bool exists = table.Lookup(triangle);
 ```
 
-Include both headers in consuming code. The table size and STL path define construction and lookup behavior; exceptions indicate an unopened file or malformed vertex data.
+### Construction behavior
 
-## Build
-
-Requirements:
-
-- Visual Studio with the MSVC C++ workload and C++20 support
-- x64 build tools (`v145` projects)
-- NuGet restore support
-- Microsoft Code Coverage Console for coverage collection
-
-```powershell
-nuget restore packages.config -PackagesDirectory packages
-msbuild GeometricHashTable.slnx /m /p:Configuration=Release /p:Platform=x64
-```
+- A table of size `0` has no storage; construction succeeds for an empty STL.
+- `Construct()` resizes storage to the configured table size.
+- Repeated construction is additive for successfully parsed facets.
+- Reconstructing the same facet is safe and does not change lookup results.
+- An unopened file throws `std::invalid_argument`.
+- Malformed or incomplete vertex/facet data throws `std::invalid_argument` or `std::runtime_error` from parsing helpers.
+- A malformed reconstruction does not explicitly clear an earlier successful table state.
 
 ## Command-line executable
 
@@ -59,7 +83,7 @@ msbuild GeometricHashTable.slnx /m /p:Configuration=Release /p:Platform=x64
 GeometricHashTable.exe <stl-file> <triangle>
 ```
 
-The triangle argument uses three brace-delimited 3D points:
+The triangle argument contains three brace-delimited points. Quote the argument in PowerShell:
 
 ```powershell
 .\x64\Release\GeometricHashTable.exe `
@@ -67,17 +91,30 @@ The triangle argument uses three brace-delimited 3D points:
   "{{0.0,0.0,0.0}{1.0,0.0,0.6661729}{1.0,1.0,0.6646931}}"
 ```
 
-The executable prints construction and lookup timings plus whether the triangle exists.
+The executable reports STL construction time, whether the triangle exists, and lookup time.
 
-## Tests
+## Unit tests
 
-Run the 60-test GoogleTest executable directly:
+Run the GoogleTest executable directly:
 
 ```powershell
 .\x64\Release\GeometricHashTable.Tests.exe
 ```
 
-Coverage includes STL parsing, positive, negative, scientific and CRLF input, point/triangle equality and ordering, all six vertex permutations, hash bounds and stability, empty and degenerate triangles, duplicate and colliding facets, repeated construction, malformed input, and the included 100,000-facet wavy-surface fixture.
+It is also available as a Visual Studio Test Explorer project. The suite now contains 69 tests across point, triangle, parser, hash, and hash-table behavior.
+
+The tests cover, among other cases:
+
+- positive, negative, scientific, CRLF, and whitespace-formatted coordinates
+- malformed, missing, overflow, empty, and incomplete vertex input
+- point equality and lexicographic ordering
+- NaN-characterized behavior and negative-zero quantization
+- every triangle vertex permutation
+- winding-sensitive and winding-independent hash variants
+- custom tolerances and table-size bounds
+- empty, degenerate, duplicate, and colliding facets
+- repeated and failed reconstruction
+- known and missing triangles in the included 100,000-facet STL fixture
 
 ## Benchmarks
 
@@ -85,37 +122,96 @@ Coverage includes STL parsing, positive, negative, scientific and CRLF input, po
 GeometricHashTable.Benchmarks.exe [stl-file] [construction-runs] [lookup-iterations]
 ```
 
-Defaults: `wavy_surface_100000.stl`, 5 construction runs, and 1,000,000 lookup iterations.
+Defaults:
+
+- STL: `GeometricHashTable/wavy_surface_100000.stl`
+- Construction runs: `5`
+- Lookup iterations: `1,000,000`
+
+Run the benchmark suite with custom values:
 
 ```powershell
 .\x64\Release\GeometricHashTable.Benchmarks.exe `
   .\GeometricHashTable\wavy_surface_100000.stl 5 1000000
 ```
 
-The benchmark suite measures 250k/1m/4m-bucket construction scaling, slot initialization strategies, known/reordered/missing lookups, tolerance and collision cases, mixed workloads, randomized checksums, SplitMix64 operations, and hash distributions. It validates lookup checksums and fails on mismatch; reported timings are observations, not pass/fail thresholds.
+Use a short smoke workload locally or in CI:
+
+```powershell
+.\x64\Release\GeometricHashTable.Benchmarks.exe `
+  .\GeometricHashTable\wavy_surface_100000.stl 1 32
+```
+
+Measured groups include:
+
+- construction at 250k, 1m, and 4m buckets
+- serial, parallel, and bulk slot initialization
+- known, reordered, missing, tolerance, collision, and mixed lookups
+- randomized lookup checksum workloads
+- order-independent and winding-sensitive triangle hashes
+- point, quantization, and mixer microbenchmarks
+- hash distribution across 4096 buckets
+- tolerance and triangle-normalization microbenchmarks
+
+Benchmark checksum mismatches fail the executable. Timings are observations; they are not asserted performance thresholds.
 
 ## Code coverage
 
-Coverage collection uses an unoptimized Debug build and Microsoft Code Coverage Console:
+Collect Microsoft Visual Studio Code Coverage from an unoptimized Debug build:
 
 ```powershell
 .\Run-Coverage.ps1
 ```
 
-It writes `coverage.xml` by default and checks:
+By default, the report is written to `coverage.xml`. The script also verifies:
 
-- Overall: at least 90% line coverage and 95% block coverage
-- Each base source file: at least 90% line and block coverage
-- Required instrumented functions: `Construct`, `_Initialize`, `_ConstructTriangle`, and `Lookup`
+- overall coverage of at least 90% lines and 95% blocks
+- at least 90% line and block coverage for each instrumented base source file
+- instrumented `HashTable` functions: `Construct`, `_Initialize`, `_ConstructTriangle`, and `Lookup`
 
-Thresholds can be overridden with `-MinimumLineCoverage`, `-MinimumBlockCoverage`, `-MinimumSourceLineCoverage`, and `-MinimumSourceBlockCoverage`.
+The thresholds are configurable:
+
+```powershell
+.\Run-Coverage.ps1 `
+  -MinimumLineCoverage 90 `
+  -MinimumBlockCoverage 95 `
+  -MinimumSourceLineCoverage 90 `
+  -MinimumSourceBlockCoverage 90
+```
+
+A recent Debug coverage run reported:
+
+- **96.88%** overall lines
+- **97.95%** overall blocks
+- **100%** lines and blocks for `Hash.h`
+- **69/69** unit tests passing
+
+Coverage totals can vary with compiler and test-environment versions, so use the generated XML and script gate as the authoritative result.
 
 ## Continuous integration
 
-The GitHub Actions workflow builds the solution for x64 Release, restores NuGet packages, runs all unit tests, runs a short benchmark smoke test, collects gated Debug coverage, and uploads `coverage.xml` as an artifact.
+`.github/workflows/msbuild.yml` runs on pushes and pull requests to `master`. It:
 
-## Current limitations
+1. restores NuGet packages;
+2. builds the solution for x64 Release;
+3. runs all unit tests;
+4. runs a short benchmark smoke workload;
+5. rebuilds and runs an instrumented Debug coverage executable;
+6. enforces the coverage thresholds; and
+7. uploads `coverage.xml` as `geometric-hash-table-coverage`.
 
-- Only ASCII STL files are supported.
-- The table retains one primary triangle per bucket; later colliding triangles are discarded.
-- Lookup is tolerance-based for points but hashes coordinates by quantization. In rare bucket-boundary cases, coordinate differences within the epsilon can quantize differently and prevent a lookup even if point equality would succeed.
+## Data and collision limitations
+
+- Only ASCII STL files are supported; binary STL input is not handled.
+- Construction scans `outer loop` blocks and ignores unrelated solid/facet text.
+- Only the first triangle placed in a bucket is retained.
+- `HashTable::Lookup()` is exact for the stored normalized triangle and uses the point epsilon for equality.
+- Quantization and hash bucket reduction are separate operations. A coordinate difference within the equality epsilon can occasionally cross a quantization bucket boundary, so the lookup is not guaranteed to match every epsilon-equal triangle.
+- Results depend on a selected table size: larger tables reduce collision pressure, but reserve a dense optional-triangle slot for every bucket.
+
+## Repository conventions
+
+- Keep new unit tests in `GeometricHashTable.Tests/HashTable.GoogleTests.cpp`.
+- Include behavioral additions in `GeometricHashTable.Coverage/GeometricHashTable.Coverage.vcxproj` through the shared test source file.
+- Keep benchmark-only workloads in `GeometricHashTable.Benchmarks/Benchmarks.cpp`.
+- Do not use benchmark timings as correctness assertions; use checksum and result validation for benchmark correctness.

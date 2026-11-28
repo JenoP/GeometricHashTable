@@ -647,6 +647,55 @@ void RunHashDistributionBenchmark(std::size_t iterations)
 		<< " checksum=" << checksum << '\n';
 }
 
+void RunToleranceAndNormalizationBenchmarks(std::size_t iterations)
+{
+	std::uint64_t toleranceChecksum = 0;
+	const auto toleranceStart = Clock::now();
+	for (std::size_t index = 0; index < iterations; ++index)
+	{
+		const double coordinate = static_cast<double>(index % 10'000) * 1e-6;
+		const Point3 point{ coordinate, -coordinate * 2.0, coordinate * 3.0 };
+		toleranceChecksum += hashPoint(point, 1e-6);
+		toleranceChecksum += hashPoint(point, 1e-3);
+	}
+	const auto toleranceEnd = Clock::now();
+	const double toleranceNs = std::chrono::duration_cast<Duration>(
+		toleranceEnd - toleranceStart).count() /
+		(static_cast<double>(iterations) * 2.0);
+
+	std::cout << "\nTolerance and normalization microbenchmarks (" << iterations << " iterations)\n";
+	std::cout << std::left << std::setw(34) << "hashPoint-two-tolerances"
+		<< std::right << std::fixed << std::setprecision(3)
+		<< " time=" << toleranceNs << " ns/op"
+		<< " throughput=" << std::setprecision(2)
+		<< 1'000'000'000.0 / toleranceNs << " hashes/sec"
+		<< " checksum=" << toleranceChecksum << '\n';
+
+	std::uint64_t normalizationChecksum = 0;
+	const auto normalizationStart = Clock::now();
+	for (std::size_t index = 0; index < iterations; ++index)
+	{
+		Triangle triangle{
+			Point3{ static_cast<double>(index % 17), 4.0, -2.0 },
+			Point3{ -1.0, static_cast<double>(index % 11), 8.0 },
+			Point3{ 2.0, -3.0, static_cast<double>(index % 19) }
+		};
+		normalizationChecksum += mix64(static_cast<std::uint64_t>(triangle[0].x)
+			^ static_cast<std::uint64_t>(triangle[2].z));
+	}
+	const auto normalizationEnd = Clock::now();
+	const double normalizationNs = std::chrono::duration_cast<Duration>(
+		normalizationEnd - normalizationStart).count() /
+		static_cast<double>(iterations);
+
+	std::cout << std::left << std::setw(34) << "triangle-constructor-normalize"
+		<< std::right << std::fixed << std::setprecision(3)
+		<< " time=" << normalizationNs << " ns/op"
+		<< " throughput=" << std::setprecision(2)
+		<< 1'000'000'000.0 / normalizationNs << " triangles/sec"
+		<< " checksum=" << normalizationChecksum << '\n';
+}
+
 void PrintUsage(const char* executable)
 {
 	std::cout
@@ -684,7 +733,8 @@ int main(int argc, char* argv[])
 		RunHashBenchmarks(options.lookupIterations);
 		RunHashDistributionBenchmark(options.lookupIterations);
 		RunTriangleHashDistributionBenchmark(options.lookupIterations);
-			return EXIT_SUCCESS;
+		RunToleranceAndNormalizationBenchmarks(options.lookupIterations);
+		return EXIT_SUCCESS;
 	}
 	catch (const std::exception& exception)
 	{

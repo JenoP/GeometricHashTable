@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <limits>
 #include <string>
 #include <system_error>
 
@@ -739,4 +740,103 @@ TEST(HashTableTests, ConstructsAndLooksUpScientificNotationWithFlexibleWhitespac
 		12.5, -0.25, 3.0,
 		13.25, -0.25, 3.0,
 		12.25, 0.75, 3.0)));
+}
+
+TEST(Point3Tests, NanCoordinatesAreNotEqualOrOrdered) {
+	const Point3 finite{ 1.0, 2.0, 3.0 };
+	const Point3 nanX{ std::numeric_limits<double>::quiet_NaN(), 2.0, 3.0 };
+	const Point3 nanY{ 1.0, std::numeric_limits<double>::quiet_NaN(), 3.0 };
+	const Point3 nanZ{ 1.0, 2.0, std::numeric_limits<double>::quiet_NaN() };
+
+	EXPECT_FALSE(finite == nanX);
+	EXPECT_FALSE(finite == nanY);
+	EXPECT_FALSE(finite == nanZ);
+	EXPECT_FALSE(nanX < finite);
+	EXPECT_FALSE(finite < nanX);
+}
+
+TEST(TriangleTests, NormalizeProducesDeterministicLexicographicVertices) {
+	Triangle triangle;
+	triangle[0] = Point3{ 3.0, -1.0, 2.0 };
+	triangle[1] = Point3{ -1.0, 4.0, 5.0 };
+	triangle[2] = Point3{ -1.0, 2.0, 9.0 };
+
+	triangle.Normalize();
+
+	EXPECT_EQ(triangle[0], (Point3{ -1.0, 2.0, 9.0 }));
+	EXPECT_EQ(triangle[1], (Point3{ -1.0, 4.0, 5.0 }));
+	EXPECT_EQ(triangle[2], (Point3{ 3.0, -1.0, 2.0 }));
+}
+
+TEST(VertexParsingTests, IgnoresTrailingTokensAfterThirdCoordinate) {
+	Point3 point;
+	EXPECT_NO_THROW(GetVertex("vertex 1 2 3 trailing", &point));
+	EXPECT_EQ(point, (Point3{ 1.0, 2.0, 3.0 }));
+}
+
+TEST(VertexParsingTests, CharacterizesNonFiniteCoordinateParsing) {
+	Point3 point;
+	EXPECT_NO_THROW(GetVertex("vertex nan 0 0", &point));
+	EXPECT_NO_THROW(GetVertex("vertex 0 inf 0", &point));
+	EXPECT_NO_THROW(GetVertex("vertex 0 0 -inf", &point));
+}
+
+TEST(HashTests, QuantizationHandlesNegativeZeroAndExactToleranceBoundary) {
+	EXPECT_EQ(quantize(-0.0, 1e-6), 0);
+	EXPECT_EQ(quantize(-1e-6, 1e-6), -1);
+	EXPECT_EQ(quantize(1e-6, 1e-6), 1);
+	EXPECT_EQ(quantize(-1.5e-6, 1e-6), quantize(-1.5001e-6, 1e-6));
+}
+
+TEST(HashTests, Mix64HasStableIndependentLookupSeeds) {
+	const std::uint64_t seed = mix64(0x123456789ABCDEF0ULL);
+	EXPECT_EQ(seed, mix64(0x123456789ABCDEF0ULL));
+	EXPECT_NE(seed, mix64(0x123456789ABCDEF1ULL));
+	EXPECT_EQ(mix64(0), mix64(0));
+}
+
+TEST(HashTests, CustomToleranceSeparatesAndGroupsCoordinatesDeterministically) {
+	const Point3 coarseA{ 1.0001, -2.0002, 3.0003 };
+	const Point3 coarseB{ 1.00049, -2.00049, 3.00049 };
+	const Point3 fineA{ 1.0000001, -2.0000002, 3.0000003 };
+	const Point3 fineB{ 1.0000008, -2.0000009, 3.0000008 };
+
+	EXPECT_EQ(hashPoint(coarseA, 1e-3), hashPoint(coarseB, 1e-3));
+	EXPECT_NE(hashPoint(fineA, 1e-6), hashPoint(fineB, 1e-6));
+}
+
+TEST(HashTableTests, RepeatedFacetAndReconstructionKeepOnlyExpectedLookup) {
+	TemporaryStlFile file(
+		"solid reconstruct\n"
+		" outer loop\n  vertex 0 0 0\n  vertex 1 0 0\n  vertex 0 1 0\n endloop\n"
+		" outer loop\n  vertex 0 0 0\n  vertex 1 0 0\n  vertex 0 1 0\n endloop\n"
+		"endsolid reconstruct\n");
+	HashTable table(1'024);
+	table.Construct(file.path().string());
+
+	const Triangle repeated = BuildTriangle(0, 0, 0, 1, 0, 0, 0, 1, 0);
+	EXPECT_TRUE(table.Lookup(repeated));
+
+	table.Construct(file.path().string());
+	EXPECT_TRUE(table.Lookup(repeated));
+}
+
+TEST(HashTableTests, NearAndOutsideToleranceRemainDistinctAcrossAllAxes) {
+	TemporaryStlFile file(
+		"solid axes\n"
+		" outer loop\n  vertex 10 20 30\n  vertex 11 20 30\n  vertex 10 21 30\n endloop\n"
+		"endsolid axes\n");
+	HashTable table(1'000'000);
+	table.Construct(file.path().string());
+
+	const Triangle inside = BuildTriangle(
+		10.0 - detail::EPSILON / 10.0, 20.0, 30.0,
+		11.0, 20.0, 30.0,
+		10.0, 21.0, 30.0);
+	const Triangle outside = BuildTriangle(
+		10.0 - detail::EPSILON * 2.0, 20.0, 30.0,
+		11.0, 20.0, 30.0,
+		10.0, 21.0, 30.0);
+	EXPECT_TRUE(table.Lookup(inside));
+	EXPECT_FALSE(table.Lookup(outside));
 }
