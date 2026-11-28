@@ -436,7 +436,7 @@ int RunLookupBenchmarks(const BenchmarkOptions& options)
 	std::unordered_map<std::uint32_t, Triangle> referenceSlots;
 	for (const Triangle& sourceTriangle : allTriangles)
 		referenceSlots.try_emplace(hashTriangle(sourceTriangle[0], sourceTriangle[1],
-				sourceTriangle[2], TABLE_SIZE, detail::EPSILON, false), sourceTriangle);
+				 sourceTriangle[2], TABLE_SIZE, detail::EPSILON, true), sourceTriangle);
 
 	for (const std::size_t requestedSize : { 64u, 1'024u, 16'384u })
 	{
@@ -448,7 +448,7 @@ int RunLookupBenchmarks(const BenchmarkOptions& options)
 		for (const Triangle& query : queries)
 		{
 			const auto found = referenceSlots.find(hashTriangle(query[0], query[1],
-				query[2], TABLE_SIZE, detail::EPSILON, false));
+				query[2], TABLE_SIZE, detail::EPSILON, true));
 			expectedResults.push_back(found != referenceSlots.end() && found->second == query);
 		}
 
@@ -562,6 +562,28 @@ void RunHashBenchmarks(std::size_t iterations)
 		<< " throughput=" << std::setprecision(2)
 		<< 1'000'000'000.0 / mixerNs << " mixes/sec"
 		<< " checksum=" << mixerChecksum << '\n';
+
+	Point3 parsedPoint;
+	const std::string_view vertexLine("vertex 1.25 -2.5 3.75");
+	std::uint64_t parserChecksum = 0;
+	const auto parserStart = Clock::now();
+	for (std::size_t index = 0; index < iterations; ++index)
+	{
+		GetVertex(vertexLine, parsedPoint);
+		parserChecksum += static_cast<std::uint64_t>(parsedPoint.x * 1'000.0)
+			+ static_cast<std::uint64_t>(parsedPoint.y * 1'000.0)
+			+ static_cast<std::uint64_t>(parsedPoint.z * 1'000.0);
+	}
+	const auto parserEnd = Clock::now();
+	const double parserNs = std::chrono::duration_cast<Duration>(
+		parserEnd - parserStart).count() / static_cast<double>(iterations);
+
+	std::cout << std::left << std::setw(34) << "GetVertex-reference"
+		<< std::right << std::fixed << std::setprecision(3)
+		<< " time=" << parserNs << " ns/op"
+		<< " throughput=" << std::setprecision(2)
+		<< 1'000'000'000.0 / parserNs << " parses/sec"
+		<< " checksum=" << parserChecksum << '\n';
 }
 
 void RunTriangleHashDistributionBenchmark(std::size_t iterations)

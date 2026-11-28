@@ -799,6 +799,16 @@ TEST(HashTests, CustomToleranceSeparatesAndGroupsCoordinatesDeterministically) {
 	EXPECT_NE(hashPoint(fineA, 1e-6), hashPoint(fineB, 1e-6));
 }
 
+TEST(HashTests, ZeroTableSizeAndRepeatedPointsHaveStableHashes) {
+	const Point3 origin;
+	EXPECT_EQ(hashTriangle(origin, origin, origin, 0), 0u);
+
+	const Point3 repeated{ 4.0, 5.0, 6.0 };
+	EXPECT_EQ(hashTriangle(repeated, repeated, repeated, 4096),
+		hashTriangle(repeated, repeated, repeated, 4096));
+	EXPECT_LT(hashTriangle(repeated, repeated, repeated, 4096), 4096u);
+}
+
 TEST(HashTableTests, RepeatedFacetAndReconstructionKeepOnlyExpectedLookup) {
 	TemporaryStlFile file(
 		"solid reconstruct\n"

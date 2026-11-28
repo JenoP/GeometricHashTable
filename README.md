@@ -15,7 +15,7 @@ The table stores at most one triangle per bucket. It is intentionally a flat loo
 
 ## How it works
 
-1. **Parse:** `HashTable::Construct()` reads ASCII STL text and processes each `outer loop` containing three `vertex` records.
+1. **Parse:** `HashTable::Construct()` reads ASCII STL text and processes each `outer loop` containing three `vertex` records. `GetVertex()` parses each `vertex` record into an existing `Point3&` output.
 2. **Normalize:** `Triangle::Normalize()` sorts the three points lexicographically by X, Y, then Z, making vertex permutations equivalent.
 3. **Quantize:** `Hash.h` converts coordinates to integer cells using a configurable tolerance.
 4. **Mix:** Each point is hashed with `mix64()`, a SplitMix64 finalizer. For normal lookups, triangle vertex hashes are sorted before the final mixing step.
@@ -65,7 +65,13 @@ Triangle triangle(
 	Point3{ 1.0, 1.0, 0.6646931 });
 
 bool exists = table.Lookup(triangle);
+
+Point3 parsedVertex;
+GetVertex("vertex 1.25 -2.5 3.75", parsedVertex);
+// parsedVertex == Point3{ 1.25, -2.5, 3.75 }
 ```
+
+`GetVertex()` uses a reference output parameter and is not nullable. Callers must provide a valid `Point3&`.
 
 ### Construction behavior
 
@@ -107,6 +113,7 @@ The tests cover, among other cases:
 
 - positive, negative, scientific, CRLF, and whitespace-formatted coordinates
 - malformed, missing, overflow, empty, and incomplete vertex input
+- reference-based `GetVertex()` parsing for positive, negative, scientific, trailing, and non-finite coordinate input
 - point equality and lexicographic ordering
 - NaN-characterized behavior and negative-zero quantization
 - every triangle vertex permutation
@@ -149,7 +156,7 @@ Measured groups include:
 - known, reordered, missing, tolerance, collision, and mixed lookups
 - randomized lookup checksum workloads
 - order-independent and winding-sensitive triangle hashes
-- point, quantization, and mixer microbenchmarks
+- point, quantization, mixer, and reference-based `GetVertex()` microbenchmarks
 - hash distribution across 4096 buckets
 - tolerance and triangle-normalization microbenchmarks
 
@@ -195,8 +202,8 @@ Coverage totals can vary with compiler and test-environment versions, so use the
 1. restores NuGet packages;
 2. builds the solution for x64 Release;
 3. runs all unit tests;
-4. runs a short benchmark smoke workload;
-5. rebuilds and runs an instrumented Debug coverage executable;
+4. runs a short benchmark smoke workload with 32 lookup iterations;
+5. rebuilds and runs an instrumented Debug coverage executable containing 69 shared unit tests;
 6. enforces the coverage thresholds; and
 7. uploads `coverage.xml` as `geometric-hash-table-coverage`.
 
