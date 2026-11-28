@@ -60,8 +60,8 @@ std::filesystem::path WavySurfacePath() {
 TEST(Point3Tests, DefaultAndToleranceEquality) {
 	const Point3 origin;
 	const Point3 zero{ 0.0, 0.0, 0.0 };
-	const Point3 nearby{ detail::EPS / 2.0, 0.0, 0.0 };
-	const Point3 boundary{ detail::EPS, 0.0, 0.0 };
+	const Point3 nearby{ detail::EPSILON / 2.0, 0.0, 0.0 };
+	const Point3 boundary{ detail::EPSILON, 0.0, 0.0 };
 	EXPECT_EQ(origin, zero);
 	EXPECT_TRUE(origin == nearby);
 	EXPECT_FALSE(origin == boundary);
@@ -150,6 +150,29 @@ TEST(HashTests, WindingVariantDistinguishesReversedVertexOrder) {
 	EXPECT_NE(forward, reverse);
 }
 
+TEST(HashTests, WindingVariantDistinguishesCyclicRotations) {
+	const Point3 a{ 1.25, -2.5, 3.75 };
+	const Point3 b{ -4.0, 5.0, 6.0 };
+	const Point3 c{ 7.0, 8.0, -9.0 };
+
+	const std::uint32_t abc = hashTriangle(a, b, c, 4096, 1e-6, false);
+	const std::uint32_t bca = hashTriangle(b, c, a, 4096, 1e-6, false);
+	const std::uint32_t cab = hashTriangle(c, a, b, 4096, 1e-6, false);
+	EXPECT_NE(abc, bca);
+	EXPECT_NE(abc, cab);
+	EXPECT_NE(bca, cab);
+}
+
+TEST(HashTests, CustomToleranceControlsQuantization) {
+	const Point3 coarseLeft{ 1.0001, 0.0, 0.0 };
+	const Point3 coarseRight{ 1.00049, 0.0, 0.0 };
+	const Point3 fineNeighbor{ 1.0000001, 0.0, 0.0 };
+
+	EXPECT_EQ(hashPoint(coarseLeft, 1e-3), hashPoint(coarseRight, 1e-3));
+	EXPECT_EQ(quantize(1.0001, 1e-3), quantize(1.00049, 1e-3));
+	EXPECT_EQ(hashPoint(fineNeighbor, 1e-6), hashPoint(Point3{ 1.0000004, 0.0, 0.0 }, 1e-6));
+}
+
 TEST(HashTableTests, MissingFileAndEmptyStlAreHandled) {
 	HashTable table(256);
 	EXPECT_THROW(table.Construct("this_file_should_not_exist.stl"), std::invalid_argument);
@@ -190,8 +213,8 @@ TEST(HashTableTests, LookupHonorsToleranceAndQuantization) {
 	table.Construct(file.path().string());
 
 	Triangle stored = BuildTriangle(0, 0, 0, 0, 1, 0, 1, 0, 0);
-	Triangle near = BuildTriangle(0, 0, 0, 0, 1, 0, 1.0 + detail::EPS / 10.0, 0, 0);
-	Triangle outside = BuildTriangle(0, 0, 0, 0, 1, 0, 1.0 + detail::EPS * 2.0, 0, 0);
+	Triangle near = BuildTriangle(0, 0, 0, 0, 1, 0, 1.0 + detail::EPSILON / 10.0, 0, 0);
+	Triangle outside = BuildTriangle(0, 0, 0, 0, 1, 0, 1.0 + detail::EPSILON * 2.0, 0, 0);
 
 	EXPECT_TRUE(table.Lookup(stored));
 	EXPECT_TRUE(table.Lookup(near));
@@ -335,7 +358,7 @@ TEST(HashTableTests, NegativeCoordinateLookupRejectsOutsideTolerance) {
 	const Triangle outside = BuildTriangle(
 		-3.5, -2.25, 1.125,
 		-2.5, -2.25, 1.125,
-		-3.5, -1.25, 1.125 + detail::EPS * 2.0);
+		-3.5, -1.25, 1.125 + detail::EPSILON * 2.0);
 	EXPECT_FALSE(table.Lookup(outside));
 }
 
@@ -352,7 +375,7 @@ TEST(HashTableTests, NegativeCoordinatesWithinToleranceRemainLookupable) {
 	table.Construct(file.path().string());
 
 	const Triangle nearby = BuildTriangle(
-		-3.5, -2.25, 1.125 - detail::EPS / 10.0,
+		-3.5, -2.25, 1.125 - detail::EPSILON / 10.0,
 		-2.5, -2.25, 1.125,
 		-3.5, -1.25, 1.125);
 	EXPECT_TRUE(table.Lookup(nearby));
@@ -387,8 +410,8 @@ TEST(Point3Tests, EqualityRejectsEachCoordinateMismatch) {
 
 TEST(Point3Tests, EqualityIsSymmetricAtToleranceBoundary) {
 	const Point3 point{ 1.0, 2.0, 3.0 };
-	const Point3 nearby{ 1.0, 2.0, 3.0 + detail::EPS / 2.0 };
-	const Point3 outside{ 1.0, 2.0, 3.0 + detail::EPS * 2.0 };
+	const Point3 nearby{ 1.0, 2.0, 3.0 + detail::EPSILON / 2.0 };
+	const Point3 outside{ 1.0, 2.0, 3.0 + detail::EPSILON * 2.0 };
 	EXPECT_TRUE(point == nearby);
 	EXPECT_TRUE(nearby == point);
 	EXPECT_FALSE(point == outside);
@@ -398,12 +421,12 @@ TEST(Point3Tests, EqualityIsSymmetricAtToleranceBoundary) {
 TEST(Point3Tests, ToleranceBoundaryIsStrictForBothSignsOnEveryAxis) {
 	const Point3 origin;
 	const std::array<Point3, 6> boundaryPoints = {{
-		{ detail::EPS, 0.0, 0.0 },
-		{ -detail::EPS, 0.0, 0.0 },
-		{ 0.0, detail::EPS, 0.0 },
-		{ 0.0, -detail::EPS, 0.0 },
-		{ 0.0, 0.0, detail::EPS },
-		{ 0.0, 0.0, -detail::EPS }
+		{ detail::EPSILON, 0.0, 0.0 },
+		{ -detail::EPSILON, 0.0, 0.0 },
+		{ 0.0, detail::EPSILON, 0.0 },
+		{ 0.0, -detail::EPSILON, 0.0 },
+		{ 0.0, 0.0, detail::EPSILON },
+		{ 0.0, 0.0, -detail::EPSILON }
 	}};
 	for (const Point3& point : boundaryPoints)
 		EXPECT_FALSE(origin == point);
@@ -606,8 +629,8 @@ TEST(VertexParsingTests, RejectsEmptyString) {
 
 TEST(HashTests, NearbyCoordinatesInSameQuantizationCellHashIdentically) {
 	const Point3 original{ 1.0, -2.0, 3.0 };
-	const Point3 nearby{ 1.0 + detail::EPS / 10.0, -2.0, 3.0 };
-	EXPECT_EQ(hashPoint(original, detail::EPS), hashPoint(nearby, detail::EPS));
+	const Point3 nearby{ 1.0 + detail::EPSILON / 10.0, -2.0, 3.0 };
+	EXPECT_EQ(hashPoint(original, detail::EPSILON), hashPoint(nearby, detail::EPSILON));
 }
 
 TEST(HashTests, TriangleHashIsBoundedForSeveralTableSizes) {
@@ -693,9 +716,9 @@ TEST(HashTableTests, WithinToleranceLookupWorksForEachVertexCoordinate) {
 	HashTable table(1'000'000);
 	table.Construct(file.path().string());
 
-	const Triangle firstVertex = BuildTriangle(0, 0, detail::EPS / 10.0, 0, 1, 0, 1, 0, 0);
-	const Triangle secondVertex = BuildTriangle(0, 0, 0, 0, 1.0 + detail::EPS / 10.0, 0, 1, 0, 0);
-	const Triangle thirdVertex = BuildTriangle(0, 0, 0, 0, 1, 0, 1.0 + detail::EPS / 10.0, 0, 0);
+	const Triangle firstVertex = BuildTriangle(0, 0, detail::EPSILON / 10.0, 0, 1, 0, 1, 0, 0);
+	const Triangle secondVertex = BuildTriangle(0, 0, 0, 0, 1.0 + detail::EPSILON / 10.0, 0, 1, 0, 0);
+	const Triangle thirdVertex = BuildTriangle(0, 0, 0, 0, 1, 0, 1.0 + detail::EPSILON / 10.0, 0, 0);
 	EXPECT_TRUE(table.Lookup(firstVertex));
 	EXPECT_TRUE(table.Lookup(secondVertex));
 	EXPECT_TRUE(table.Lookup(thirdVertex));

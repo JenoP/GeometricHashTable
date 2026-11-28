@@ -17,7 +17,7 @@ HashTable::HashTable(const uint32_t maxEntries)
 static inline uint32_t Hash(const Triangle& triangle, const uint32_t maxEntries)
 {
 	return hashTriangle(triangle[0], triangle[1], triangle[2],
-		maxEntries, detail::EPS, false);
+		maxEntries, detail::EPSILON, false);
 }
 
 void HashTable::Construct(const std::string& stlFileStr)

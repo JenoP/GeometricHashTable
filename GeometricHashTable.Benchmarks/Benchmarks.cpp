@@ -382,7 +382,7 @@ int RunLookupBenchmarks(const BenchmarkOptions& options)
 	const Triangle nearTolerance = BuildTriangle(
 		0.0, 0.0, 0.0,
 		1.0, 0.0, 0.6661729,
-		1.0 + detail::EPS / 2.0, 1.0, 0.6646931);
+		1.0 + detail::EPSILON / 2.0, 1.0, 0.6646931);
 	RunLookupBenchmark("lookup-near-tolerance", table, nearTolerance, options.lookupIterations,
 		false);
 
@@ -436,7 +436,7 @@ int RunLookupBenchmarks(const BenchmarkOptions& options)
 	std::unordered_map<std::uint32_t, Triangle> referenceSlots;
 	for (const Triangle& sourceTriangle : allTriangles)
 		referenceSlots.try_emplace(hashTriangle(sourceTriangle[0], sourceTriangle[1],
-				sourceTriangle[2], TABLE_SIZE, detail::EPS, false), sourceTriangle);
+				sourceTriangle[2], TABLE_SIZE, detail::EPSILON, false), sourceTriangle);
 
 	for (const std::size_t requestedSize : { 64u, 1'024u, 16'384u })
 	{
@@ -448,7 +448,7 @@ int RunLookupBenchmarks(const BenchmarkOptions& options)
 		for (const Triangle& query : queries)
 		{
 			const auto found = referenceSlots.find(hashTriangle(query[0], query[1],
-				query[2], TABLE_SIZE, detail::EPS, false));
+				query[2], TABLE_SIZE, detail::EPSILON, false));
 			expectedResults.push_back(found != referenceSlots.end() && found->second == query);
 		}
 

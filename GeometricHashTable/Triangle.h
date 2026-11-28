@@ -6,7 +6,7 @@
 
 namespace detail
 {
-	static constexpr double EPS = 1e-6;
+	static constexpr double EPSILON = 1e-6;
 
 	static constexpr auto VERTEX_STR = "vertex";
 	static constexpr auto VERTEX_LEN = 6; // Length of string "vertex".
@@ -35,7 +35,7 @@ struct Point3
 
 	bool IsAlmostEqual(const double& a, const double& b) const
 	{
-		return std::abs(a - b) < detail::EPS;
+		return std::abs(a - b) < detail::EPSILON;
 	}
 
 	bool operator==(const Point3& other) const
