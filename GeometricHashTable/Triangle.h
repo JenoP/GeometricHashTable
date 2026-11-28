@@ -86,18 +86,18 @@ struct Triangle : public std::array<Point3, 3>
 	}
 };
 
-inline void GetVertex(const std::string_view& str, Point3* p)
+inline void GetVertex(const std::string_view& str, Point3& p)
 {
 	using namespace detail;
 
-	if (!str.starts_with(VERTEX_STR) || !p)
+	if (!str.starts_with(VERTEX_STR))
 	{
-		throw std::invalid_argument("Invalid input.");
+		throw std::invalid_argument("vertex not found.");
 	}
 
-	from_chars_result res = std::from_chars(str.data() + VERTEX_LEN + WHITESPACE_LEN, str.data() + str.size(), p->x);
+	from_chars_result res = std::from_chars(str.data() + VERTEX_LEN + WHITESPACE_LEN, str.data() + str.size(), p.x);
 
-	res = std::from_chars(res.ptr + WHITESPACE_LEN, str.data() + str.size(), p->y);
+	res = std::from_chars(res.ptr + WHITESPACE_LEN, str.data() + str.size(), p.y);
 
-	res = std::from_chars(res.ptr + WHITESPACE_LEN, str.data() + str.size(), p->z);
+	res = std::from_chars(res.ptr + WHITESPACE_LEN, str.data() + str.size(), p.z);
 }

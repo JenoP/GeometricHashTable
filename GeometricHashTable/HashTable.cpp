@@ -53,11 +53,11 @@ void HashTable::_ConstructTriangle(std::ifstream& stlFileStream)
 	Triangle triangle;
 	std::string line;
 
-	for (Point3* p : { &triangle[0], &triangle[1], &triangle[2] })
+	for (auto& vertex : triangle)
 	{
 		if (std::getline(stlFileStream >> std::ws, line))
 		{
-			GetVertex(line, p);
+			GetVertex(line, vertex);
 		}
 	}
 
